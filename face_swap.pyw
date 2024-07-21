@@ -1,14 +1,9 @@
 import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox
-import tkinter.ttk as ttk
-from tkinter.constants import *
-import os.path
-import numpy as np
 import os
 import glob
 import cv2
-import matplotlib.pyplot as plt
 import insightface
 from insightface.app import FaceAnalysis
 
@@ -24,11 +19,20 @@ HIGHLIGHTS = {
     "highlightcolor": "black",
 }
 
+# Store the paths for images and folders
+class PathMemory:
+    def __init__(self):
+        self.first_image = None
+        self.source_folder = None
+        self.destination_folder = None
+
+path_memory = PathMemory()
+
 class Menu:
     def __init__(self, top=None):
-        top.geometry("380x320+750+184")
-        top.minsize(380, 320)
-        top.maxsize(400, 380)
+        top.geometry("380x400+750+184")
+        top.minsize(380, 400)
+        top.maxsize(400, 400)
         top.title("Face Swapping")
         top.configure(background="#587B7F")
         top.configure(**HIGHLIGHTS)
@@ -48,167 +52,124 @@ class Menu:
         self.image_label = tk.Label(self.top, image=self.image, background="#587B7F")
         self.image_label.place(relx=0.31, rely=0.2)
 
+        button_y_positions = [0.4, 0.52, 0.64, 0.76]  # Increased space between buttons
+
         self.Button1 = tk.Button(self.top)
         self.Button1.configure(**HIGHLIGHTS)
-        self.Button1.place(relx=0.274, rely=0.5, height=44, width=177)
+        self.Button1.place(relx=0.224, rely=button_y_positions[0], height=44, width=213)  # Adjusted position and width
         self.Button1.configure(activebackground="#7b7979")
         self.Button1.configure(activeforeground="black")
         self.Button1.configure(background="#B36C24")
-        self.Button1.configure(command=self.two_swap)
+        self.Button1.configure(command=self.select_first_image)
         self.Button1.configure(compound='left')
         self.Button1.configure(disabledforeground="#a3a3a3")
         self.Button1.configure(font="-family {Arial Rounded MT Bold} -size 14")
         self.Button1.configure(foreground="#ffffff")
         self.Button1.configure(pady="0")
-        self.Button1.configure(text='''Two Swap''')
-        
-        self.Button1_1 = tk.Button(self.top)
-        self.Button1_1.configure(**HIGHLIGHTS)
-        self.Button1_1.place(relx=0.274, rely=0.68, height=44, width=177)
-        self.Button1_1.configure(activebackground="#7b7979")
-        self.Button1_1.configure(activeforeground="black")
-        self.Button1_1.configure(background="#A7631E")
-        self.Button1_1.configure(command=self.all_swap)
-        self.Button1_1.configure(compound='left')
-        self.Button1_1.configure(disabledforeground="#a3a3a3")
-        self.Button1_1.configure(font="-family {Arial Rounded MT Bold} -size 14")
-        self.Button1_1.configure(foreground="#ffffff")
-        self.Button1_1.configure(highlightbackground="#d9d9d9")
-        self.Button1_1.configure(highlightcolor="black")
-        self.Button1_1.configure(pady="0")
-        self.Button1_1.configure(text='''All Swap''')
+        self.Button1.configure(text='''Select Default Image''')
 
-        # Remembered paths
-        self.last_open_dir = None  # Last directory used for opening files
-        self.last_save_dir = None  # Last directory used for saving files
-        self.first_image_path = None  # Path of the first image selected
+        self.Button2 = tk.Button(self.top)
+        self.Button2.configure(**HIGHLIGHTS)
+        self.Button2.place(relx=0.224, rely=button_y_positions[1], height=44, width=213)  # Adjusted position and width
+        self.Button2.configure(activebackground="#7b7979")
+        self.Button2.configure(activeforeground="black")
+        self.Button2.configure(background="#B36C24")
+        self.Button2.configure(command=self.select_source_folder)
+        self.Button2.configure(compound='left')
+        self.Button2.configure(disabledforeground="#a3a3a3")
+        self.Button2.configure(font="-family {Arial Rounded MT Bold} -size 14")
+        self.Button2.configure(foreground="#ffffff")
+        self.Button2.configure(pady="0")
+        self.Button2.configure(text='''Select Source Path''')
 
-    def open_file_dialog(self, initial_dir=None, title="Select a file"):
-        root = tk.Tk()
-        root.withdraw()
-        file_path = filedialog.askopenfilename(
-            initialdir=initial_dir if initial_dir else self.last_open_dir,
-            filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.webp")],
-            title=title
-        )
+        self.Button3 = tk.Button(self.top)
+        self.Button3.configure(**HIGHLIGHTS)
+        self.Button3.place(relx=0.224, rely=button_y_positions[2], height=44, width=213)  # Adjusted position and width
+        self.Button3.configure(activebackground="#7b7979")
+        self.Button3.configure(activeforeground="black")
+        self.Button3.configure(background="#A7631E")
+        self.Button3.configure(command=self.select_destination_folder)
+        self.Button3.configure(compound='left')
+        self.Button3.configure(disabledforeground="#a3a3a3")
+        self.Button3.configure(font="-family {Arial Rounded MT Bold} -size 14")
+        self.Button3.configure(foreground="#ffffff")
+        self.Button3.configure(highlightbackground="#d9d9d9")
+        self.Button3.configure(highlightcolor="black")
+        self.Button3.configure(pady="0")
+        self.Button3.configure(text='''Select Destination Path''')
+
+        self.Button4 = tk.Button(self.top)
+        self.Button4.configure(**HIGHLIGHTS)
+        self.Button4.place(relx=0.224, rely=button_y_positions[3], height=44, width=213)  # Adjusted position and width
+        self.Button4.configure(activebackground="#7b7979")
+        self.Button4.configure(activeforeground="black")
+        self.Button4.configure(background="#A7631E", state=tk.DISABLED, fg='gray')  # Set initial state to disabled and gray
+        self.Button4.configure(command=self.all_swap)
+        self.Button4.configure(compound='left')
+        self.Button4.configure(disabledforeground="#a3a3a3")
+        self.Button4.configure(font="-family {Arial Rounded MT Bold} -size 14")
+        self.Button4.configure(foreground="#ffffff")
+        self.Button4.configure(highlightbackground="#d9d9d9")
+        self.Button4.configure(highlightcolor="black")
+        self.Button4.configure(pady="0")
+        self.Button4.configure(text='''All Swap''')
+
+    def check_all_set(self):
+        if path_memory.first_image and path_memory.source_folder and path_memory.destination_folder:
+            self.Button4.configure(state=tk.NORMAL, background="#1E90FF", foreground="#ffffff")  # Enable and set to blue
+        else:
+            self.Button4.configure(state=tk.DISABLED, background="#A7631E", foreground="gray")  # Keep disabled and gray
+
+    def select_first_image(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.webp")])
         if file_path:
-            self.last_open_dir = os.path.dirname(file_path)  # Update last open directory
-            if not self.first_image_path:
-                self.first_image_path = file_path  # Set the first image path if not already set
-        return file_path
+            path_memory.first_image = file_path
+            messagebox.showinfo("Information", f"Default image selected: {file_path}")
+        self.check_all_set()
 
-    def save_file_dialog(self, initial_dir=None, title="Save file as"):
-        root = tk.Tk()
-        root.withdraw()
-        file_path = filedialog.asksaveasfilename(
-            initialdir=initial_dir if initial_dir else self.last_save_dir,
-            defaultextension=".png",
-            filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")],
-            title=title
-        )
-        if file_path:
-            self.last_save_dir = os.path.dirname(file_path)  # Update last save directory
-        return file_path
+    def select_source_folder(self):
+        folder_path = filedialog.askdirectory()
+        if folder_path:
+            path_memory.source_folder = folder_path
+            messagebox.showinfo("Information", f"Source path selected: {folder_path}")
+        self.check_all_set()
+
+    def select_destination_folder(self):
+        folder_path = filedialog.askdirectory()
+        if folder_path:
+            path_memory.destination_folder = folder_path
+            messagebox.showinfo("Information", f"Destination folder selected: {folder_path}")
+        self.check_all_set()
 
     def all_swap(self):
+        if not path_memory.first_image or not path_memory.source_folder or not path_memory.destination_folder:
+            messagebox.showwarning("Warning", "Please select all paths before proceeding.")
+            return
+
         app = FaceAnalysis(name='buffalo_l')
         app.prepare(ctx_id=0, det_size=(640, 640))
-
         swapper = insightface.model_zoo.get_model('neurons_weigths/inswapper_128.onnx', download=False, download_zip=False)
 
-        if not self.first_image_path:
-            # Prompt for the first image if not previously set
-            self.first_image_path = self.open_file_dialog(title="Select the default image")
-            if not self.first_image_path:
-                return  # Exit if no file selected
-        
-        last_image_path = self.open_file_dialog(initial_dir=os.path.dirname(self.first_image_path), title="Select the image where the faces will be replaced")
-        if not last_image_path:
-            return  # Exit if no file selected
+        img1 = cv2.imread(path_memory.first_image)
+        face1 = app.get(img1)[0]
 
-        def swapping_show_all(img1_fn, img2_fn, app, swapper, plot_before=True, plot_after=True):
-            img1 = cv2.imread(img1_fn)
+        image_files = glob.glob(os.path.join(path_memory.source_folder, "*.png")) + \
+                      glob.glob(os.path.join(path_memory.source_folder, "*.jpg")) + \
+                      glob.glob(os.path.join(path_memory.source_folder, "*.jpeg")) + \
+                      glob.glob(os.path.join(path_memory.source_folder, "*.webp"))
+
+        for i, img2_fn in enumerate(image_files):
             img2 = cv2.imread(img2_fn)
-
-            if plot_before:
-                fig, ax = plt.subplots()
-                ax.imshow(img1[:,:,::-1])
-                ax.axis('off')
-                plt.show()
-
-            face1 = app.get(img1)[0]
             faces = app.get(img2)
-
-            img1_customs = app.get(img1)
-            img1_custom = img1_customs[0]
             img2_ = img2.copy()
-            
+
             for face in faces:
-                img2_ = swapper.get(img2_, face, img1_custom, paste_back=True)
-            
-            if plot_after:
-                fig, ax = plt.subplots()
-                ax.imshow(img2_[:,:,::-1])
-                ax.axis('off')
-                plt.show()
+                img2_ = swapper.get(img2_, face, face1, paste_back=True)
 
-            # Ask for save location and save the image
-            save_path = self.save_file_dialog(title="Save Result Image")
-            if save_path:
-                cv2.imwrite(save_path, img2_)
+            save_path = os.path.join(path_memory.destination_folder, f"{i+1:04d}.png")
+            cv2.imwrite(save_path, img2_)
 
-        swapping_show_all(self.first_image_path, last_image_path, app, swapper)
-
-    def two_swap(self):
-        app = FaceAnalysis(name='buffalo_l')
-        app.prepare(ctx_id=0, det_size=(640, 640))
-        
-        swapper = insightface.model_zoo.get_model('neurons_weigths/inswapper_128.onnx', download=False, download_zip=False)
-        
-        img1_fn = self.open_file_dialog(title="Select an image to Swap")
-        if not img1_fn:
-            return  # Exit if no file selected
-        
-        img2_fn = self.open_file_dialog(initial_dir=os.path.dirname(img1_fn), title="Select the second image to Swap")
-        if not img2_fn:
-            return  # Exit if no file selected
-
-        def swapping_show(img1_fn, img2_fn, app, swapper, plot_before=True, plot_after=True):
-            img1 = cv2.imread(img1_fn)
-            img2 = cv2.imread(img2_fn)
-
-            if plot_before:
-                fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-                axs[0].imshow(img1[:,:,::-1])
-                axs[0].axis('off')
-                axs[1].imshow(img2[:,:,::-1])
-                axs[1].axis('off')
-                plt.show()
-
-            face1 = app.get(img1)[0]
-            face2 = app.get(img2)[0]
-
-            img1_ = img1.copy()
-            img2_ = img2.copy()
-
-            if plot_after:
-                img1_ = swapper.get(img1_, face1, face2, paste_back=True)
-                img2_ = swapper.get(img2_, face2, face1, paste_back=True)
-                fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-                axs[0].imshow(img1_[:,:,::-1])
-                axs[0].axis('off')
-                axs[1].imshow(img2_[:,:,::-1])
-                axs[1].axis('off')
-                plt.show()
-                
-                # Ask for save location and save the image
-                save_path = self.save_file_dialog(title="Save Result Images")
-                if save_path:
-                    base, ext = os.path.splitext(save_path)
-                    cv2.imwrite(base + "_1" + ext, img1_)
-                    cv2.imwrite(base + "_2" + ext, img2_)
-
-        swapping_show(img1_fn, img2_fn, app, swapper)
+        messagebox.showinfo("Information", "All images have been processed and saved.")
 
 if __name__ == '__main__':
     root = tk.Tk()

@@ -18,7 +18,3 @@ Then, once you are with your terminal in the directory of the project folder you
 ```bash
 pip install -r requirements.txt
 ```
-## Author
-
-- [@nixiz0](https://github.com/nixiz0)
-
