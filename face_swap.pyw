@@ -23,7 +23,7 @@ HIGHLIGHTS = {
 class PathMemory:
     def __init__(self):
         self.first_image = None
-        self.source_folder = None
+        self.source_images = None
         self.destination_folder = None
 
 path_memory = PathMemory()
@@ -48,15 +48,11 @@ class Menu:
         self.Label1.configure(disabledforeground="#a3a3a3")
         self.Label1.configure(text='''Face-Swap''')
         
-        self.image = tk.PhotoImage(file="ressources/face_swap_logo.png")
-        self.image_label = tk.Label(self.top, image=self.image, background="#587B7F")
-        self.image_label.place(relx=0.31, rely=0.2)
-
-        button_y_positions = [0.4, 0.52, 0.64, 0.76]  # Increased space between buttons
+        button_y_positions = [0.31, 0.46, 0.62, 0.78]  # Increased space between buttons
 
         self.Button1 = tk.Button(self.top)
         self.Button1.configure(**HIGHLIGHTS)
-        self.Button1.place(relx=0.224, rely=button_y_positions[0], height=44, width=213)  # Adjusted position and width
+        self.Button1.place(relx=0.5, rely=button_y_positions[0], height=44, width=256, anchor='center')  # Adjusted position and width
         self.Button1.configure(activebackground="#7b7979")
         self.Button1.configure(activeforeground="black")
         self.Button1.configure(background="#B36C24")
@@ -70,21 +66,21 @@ class Menu:
 
         self.Button2 = tk.Button(self.top)
         self.Button2.configure(**HIGHLIGHTS)
-        self.Button2.place(relx=0.224, rely=button_y_positions[1], height=44, width=213)  # Adjusted position and width
+        self.Button2.place(relx=0.5, rely=button_y_positions[1], height=44, width=256, anchor='center')  # Adjusted position and width
         self.Button2.configure(activebackground="#7b7979")
         self.Button2.configure(activeforeground="black")
         self.Button2.configure(background="#B36C24")
-        self.Button2.configure(command=self.select_source_folder)
+        self.Button2.configure(command=self.select_source_images)
         self.Button2.configure(compound='left')
         self.Button2.configure(disabledforeground="#a3a3a3")
         self.Button2.configure(font="-family {Arial Rounded MT Bold} -size 14")
         self.Button2.configure(foreground="#ffffff")
         self.Button2.configure(pady="0")
-        self.Button2.configure(text='''Select Source Path''')
+        self.Button2.configure(text='''Select Source Images''')
 
         self.Button3 = tk.Button(self.top)
         self.Button3.configure(**HIGHLIGHTS)
-        self.Button3.place(relx=0.224, rely=button_y_positions[2], height=44, width=213)  # Adjusted position and width
+        self.Button3.place(relx=0.5, rely=button_y_positions[2], height=44, width=256, anchor='center')  # Adjusted position and width
         self.Button3.configure(activebackground="#7b7979")
         self.Button3.configure(activeforeground="black")
         self.Button3.configure(background="#A7631E")
@@ -100,7 +96,7 @@ class Menu:
 
         self.Button4 = tk.Button(self.top)
         self.Button4.configure(**HIGHLIGHTS)
-        self.Button4.place(relx=0.224, rely=button_y_positions[3], height=44, width=213)  # Adjusted position and width
+        self.Button4.place(relx=0.5, rely=button_y_positions[3], height=44, width=256, anchor='center')  # Adjusted position and width
         self.Button4.configure(activebackground="#7b7979")
         self.Button4.configure(activeforeground="black")
         self.Button4.configure(background="#A7631E", state=tk.DISABLED, fg='gray')  # Set initial state to disabled and gray
@@ -115,7 +111,7 @@ class Menu:
         self.Button4.configure(text='''All Swap''')
 
     def check_all_set(self):
-        if path_memory.first_image and path_memory.source_folder and path_memory.destination_folder:
+        if path_memory.first_image and path_memory.source_images and path_memory.destination_folder:
             self.Button4.configure(state=tk.NORMAL, background="#1E90FF", foreground="#ffffff")  # Enable and set to blue
         else:
             self.Button4.configure(state=tk.DISABLED, background="#A7631E", foreground="gray")  # Keep disabled and gray
@@ -127,11 +123,11 @@ class Menu:
             messagebox.showinfo("Information", f"Default image selected: {file_path}")
         self.check_all_set()
 
-    def select_source_folder(self):
-        folder_path = filedialog.askdirectory()
-        if folder_path:
-            path_memory.source_folder = folder_path
-            messagebox.showinfo("Information", f"Source path selected: {folder_path}")
+    def select_source_images(self):
+        file_paths = filedialog.askopenfilenames(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.webp")])
+        if file_paths:
+            path_memory.source_images = file_paths
+            messagebox.showinfo("Information", f"Source images selected: {len(file_paths)} images")
         self.check_all_set()
 
     def select_destination_folder(self):
@@ -142,7 +138,7 @@ class Menu:
         self.check_all_set()
 
     def all_swap(self):
-        if not path_memory.first_image or not path_memory.source_folder or not path_memory.destination_folder:
+        if not path_memory.first_image or not path_memory.source_images or not path_memory.destination_folder:
             messagebox.showwarning("Warning", "Please select all paths before proceeding.")
             return
 
@@ -153,12 +149,7 @@ class Menu:
         img1 = cv2.imread(path_memory.first_image)
         face1 = app.get(img1)[0]
 
-        image_files = glob.glob(os.path.join(path_memory.source_folder, "*.png")) + \
-                      glob.glob(os.path.join(path_memory.source_folder, "*.jpg")) + \
-                      glob.glob(os.path.join(path_memory.source_folder, "*.jpeg")) + \
-                      glob.glob(os.path.join(path_memory.source_folder, "*.webp"))
-
-        for i, img2_fn in enumerate(image_files):
+        for i, img2_fn in enumerate(path_memory.source_images):
             img2 = cv2.imread(img2_fn)
             faces = app.get(img2)
             img2_ = img2.copy()
